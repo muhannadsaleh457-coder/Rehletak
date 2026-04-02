@@ -1,0 +1,6 @@
+@Rehletak_HostAddress = http://localhost:5262
+
+GET {{Rehletak_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

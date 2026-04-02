@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rehletak.Domain\Rehletak.Domain.csproj" />
+    <ProjectReference Include="..\Rehletak.Shared\Rehletak.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

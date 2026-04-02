@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Core/">
+    <Project Path="Rehletak.Abstractions/Rehletak.Abstractions.csproj" />
+    <Project Path="Rehletak.Domain/Rehletak.Domain.csproj" />
+    <Project Path="Rehletak.Services/Rehletak.Services.csproj" />
+  </Folder>
+  <Folder Name="/Infurstructure/">
+    <Project Path="Rehletak.Presentation/Rehletak.Presentation.csproj" />
+    <Project Path="Rehletak.Presistense/Rehletak.Presistense.csproj" />
+  </Folder>
+  <Project Path="Rehletak.Shared/Rehletak.Shared.csproj" />
+  <Project Path="Rehletak/Rehletak.csproj" />
+</Solution>
