@@ -9,5 +9,5 @@
     <Project Path="Rehletak.Presistense/Rehletak.Presistense.csproj" />
   </Folder>
   <Project Path="Rehletak.Shared/Rehletak.Shared.csproj" />
-  <Project Path="Rehletak/Rehletak.csproj" />
+  <Project Path="Rehletak/Rehletak.Web.csproj" />
 </Solution>
