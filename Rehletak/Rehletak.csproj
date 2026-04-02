@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Rehletak.Presentation\Rehletak.Presentation.csproj" />
+    <ProjectReference Include="..\Rehletak.Presistense\Rehletak.Presistense.csproj" />
+    <ProjectReference Include="..\Rehletak.Services\Rehletak.Services.csproj" />
   </ItemGroup>
 
 </Project>

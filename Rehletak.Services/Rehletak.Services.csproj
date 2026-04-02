@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Rehletak.Abstractions\Rehletak.Abstractions.csproj" />
+    <ProjectReference Include="..\Rehletak.Presistense\Rehletak.Presistense.csproj" />
   </ItemGroup>
 
 </Project>
