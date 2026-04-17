@@ -6,6 +6,7 @@ namespace Rehletak.Shared.Dtos.Auth.ResetPassword
 {
     public class VerifyResetOtpResponse
     {
-        public string message { get; set; }
+
+        public string resetToken { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +8,7 @@ using Rehletak.Domain.Entites.Auth;
 using Rehletak.Presistense.Contexts;
 using Rehletak.Services;
 using Rehletak.Services.Auth.Options;
+using Rehletak.Web.BackgroundJobs;
 using Rehletak.Web.Middlewares;
 using StackExchange.Redis;
 using System.Text;
@@ -75,6 +77,13 @@ namespace Rehletak
                 options.Configuration = builder.Configuration["Redis:ConnectionString"];
             });
 
+            builder.Services.AddHangfire(config =>
+            {
+                config.UseRecommendedSerializerSettings()
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"));
+            });
+
 
             builder.Services.Configure<TwilioOption>(builder.Configuration.GetSection("TwilioSettings"));
             builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
@@ -82,6 +91,14 @@ namespace Rehletak
 
 
             var app = builder.Build();
+
+            var jobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+
+            jobManager.AddOrUpdate<MyBackGroundJobs>(
+                "CleanNotActiveTokens",
+                j => j.CleanNotActiveTokens(),
+                Cron.Daily
+                );
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

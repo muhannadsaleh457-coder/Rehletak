@@ -239,7 +239,7 @@ namespace Rehletak.Abstractions.Auth
             var newRefreshToken = new RefreshToken
             {
                 token = refreshToken,
-                expires_at = DateTime.UtcNow.AddDays(7).ToLocalTime(),
+                expires_at = DateTime.UtcNow.AddDays(7),
                 userId = user.Id,
 
             };
@@ -285,9 +285,11 @@ namespace Rehletak.Abstractions.Auth
 
             await db.KeyDeleteAsync($"forget_password:{request.email}");
 
+            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+
             return new VerifyResetOtpResponse
             {
-                message = "OTP verified successfully. You can now reset your password."
+                resetToken = resetToken
             };
         }
 
@@ -296,9 +298,7 @@ namespace Rehletak.Abstractions.Auth
             var user = await userManager.FindByEmailAsync(request.email);
             if (user is null) throw new UnAuthorizeException("User with this email does not exist");
 
-            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
-
-            var result = await userManager.ResetPasswordAsync(user, resetToken, request.newPassword);
+            var result = await userManager.ResetPasswordAsync(user, request.resetToken, request.newPassword);
             if (!result.Succeeded)
             {
                 throw new Exception($"Failed to reset password: {string.Join(", ", result.Errors.Select(e => e.Description))}");
@@ -326,7 +326,7 @@ namespace Rehletak.Abstractions.Auth
             var refToken = new RefreshToken
             {
                 token = newRefreshToken,
-                expires_at = DateTime.UtcNow.AddDays(7).ToLocalTime(),
+                expires_at = DateTime.UtcNow.AddDays(7),
                 userId = user.Id,
             };
 

@@ -7,6 +7,7 @@ namespace Rehletak.Shared.Dtos.Auth.ResetPassword
     public class ResetPasswordRequest
     {
         public string email { get; set; }
+        public string resetToken { get; set; }
         public string newPassword { get; set; }
     }
 }
