@@ -398,9 +398,13 @@ namespace Rehletak.Abstractions.Auth
             {
             new Claim(ClaimTypes.NameIdentifier,user.Id),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.full_name),
-            new Claim(ClaimTypes.MobilePhone, user.PhoneNumber)
+            new Claim(ClaimTypes.Name, user.full_name)
         };
+
+            if (user.PhoneNumber != null)
+            {
+                claims.Add(new Claim(ClaimTypes.MobilePhone, user.PhoneNumber));
+            }
 
             var roles = await userManager.GetRolesAsync(user);
 
@@ -460,17 +464,20 @@ namespace Rehletak.Abstractions.Auth
             await context.SaveChangesAsync();
         }
 
-        public async Task InitUserAsync(AppUser user)
+        public async Task InitUserWithGoogleAsync(string fullName, string userName, string phoneNumber, string email,string googleId)
         {
             var newUser = new AppUser
             {
-                full_name = user.full_name,
-                UserName = user.UserName,
-                PhoneNumber = user.PhoneNumber,
-                Email = user.Email
+                full_name = fullName,
+                UserName = email,
+                PhoneNumber = phoneNumber,
+                Email = email
+
             };
 
-            await userManager.CreateAsync(newUser);
+           var result = await userManager.CreateAsync(newUser);
+
+            if (!result.Succeeded) throw new Exception($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
             if (!await roleManager.RoleExistsAsync("User"))
             {

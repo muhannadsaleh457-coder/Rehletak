@@ -101,35 +101,38 @@ namespace Rehletak.Presentation.Controllers
         {
             var properties = new AuthenticationProperties
             {
-                RedirectUri = Url.Action("GoogleCallback", "Auth")
+                RedirectUri = "/api/Auth/google/handle"
             };
             return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
 
 
-        [HttpGet("google/callback")]
-        public async Task<IActionResult> GoogleCallback()
+        [HttpGet("google/handle")]
+        public async Task<IActionResult> GoogleHandle()
         {
             var result = await HttpContext.AuthenticateAsync(
         CookieAuthenticationDefaults.AuthenticationScheme
-    );
+          );
 
             if (!result.Succeeded)
                 return Unauthorized();
 
-            var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
-            var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
-            var phoneNumber = result.Principal.FindFirst(ClaimTypes.MobilePhone)?.Value;
+            var claims = result.Principal.Claims;
+            var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+            var phoneNumber = claims.FirstOrDefault(c => c.Type == ClaimTypes.MobilePhone)?.Value;
+            var googleId = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
             {
-                await serviceManager.authService.InitUserAsync(user);
+                await serviceManager.authService.InitUserWithGoogleAsync(name, email, phoneNumber, email, googleId);
+                user = await userManager.FindByEmailAsync(email); 
+                if (user == null) throw new Exception("User creation failed");
             }
             var refreshToken =  serviceManager.authService.GenerateRefreshToken();
 
             var token = await serviceManager.authService.GenerateJwtAccessTokenAsync(user);
-
             var newRefrshToken = new RefreshToken
             {
                 token = refreshToken,

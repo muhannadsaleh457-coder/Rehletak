@@ -25,6 +25,6 @@ namespace Rehletak.Abstractions.Auth
         Task<string> GenerateJwtAccessTokenAsync(AppUser user);
         string GenerateRefreshToken();
         Task SaveRefreshTokenAsync(RefreshToken refreshToken);
-        Task InitUserAsync(AppUser user);
+        Task InitUserWithGoogleAsync(string fullName, string userName, string phoneNumber, string email, string googleId);
     }
 }

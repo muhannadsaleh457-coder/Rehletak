@@ -33,7 +33,7 @@ namespace Rehletak
 
             builder.Services.AddCors(options =>
             {
-               
+
                 options.AddPolicy("AllowAngular", policy =>
                 {
                     policy.WithOrigins("http://localhost:4200")
@@ -54,7 +54,13 @@ namespace Rehletak
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
+            }).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+            {
+                // ← ده أهم سطر في الحل
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            })
+             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -68,23 +74,16 @@ namespace Rehletak
                         Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
                     )
                 };
-            }).AddCookie(options =>
-            {
-                options.Cookie.SameSite = SameSiteMode.None;  
-                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             })
-
-                .AddGoogle(options =>
+              .AddGoogle(options =>
                 {
                     options.ClientId = builder.Configuration["Google:ClientId"];
                     options.ClientSecret = builder.Configuration["Google:ClientSecret"];
-                    //options.CallbackPath = "/api/auth/google/callback";
+                    options.CallbackPath = "/api/Auth/google/callback";
+                    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
-                    options.CorrelationCookie.SameSite = SameSiteMode.None;
+                    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
                     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                    options.CorrelationCookie.HttpOnly = true;
-
-                    options.SaveTokens = true;
 
                 });
 

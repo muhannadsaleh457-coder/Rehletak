@@ -9,9 +9,11 @@
 1. [SMS OTP Authentication](#sms-otp-authentication)
 2. [Email Registration](#email-registration)
 3. [Login](#login)
-4. [Password Reset](#password-reset)
-5. [Token Refresh](#token-refresh)
-6. [Error Handling](#error-handling)
+4. [Google OAuth Login](#google-oauth-login)
+5. [Password Reset](#password-reset)
+6. [Token Refresh](#token-refresh)
+7. [User Profile](#user-profile)
+8. [Error Handling](#error-handling)
 
 ---
 
@@ -256,6 +258,80 @@ async function login(email, password) {
 
 ---
 
+## Google OAuth Login
+
+### 1. Initiate Google Login
+
+**Endpoint:** `GET /Auth/google/login`
+
+**Description:** Redirects user to Google OAuth consent screen for authentication.
+
+**Response:**
+- Redirects to Google OAuth page
+- User logs in with their Google account
+- Automatically redirects to `/Auth/google/handle` after successful authentication
+
+**Frontend Implementation:**
+```javascript
+function initiateGoogleLogin() {
+  // Redirect to your backend's Google login endpoint
+  window.location.href = 'https://your-api-domain.com/api/Auth/google/login';
+}
+```
+
+---
+
+### 2. Handle Google Login Callback
+
+**Endpoint:** `GET /Auth/google/handle`
+
+**Description:** Handles the OAuth callback from Google. Creates a new user if they don't exist, or logs in existing user. Returns JWT tokens.
+
+**Response (Success - 200 OK):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "refresh_token_value"
+}
+```
+
+**Response (Error - 401):**
+```json
+{
+  "message": "Unauthorized - Failed to authenticate with Google"
+}
+```
+
+**Response (Error - 500):**
+```json
+{
+  "message": "User creation failed"
+}
+```
+
+**Frontend Flow:**
+1. User clicks "Login with Google" button
+2. Call `GET /Auth/google/login` (or set href to this endpoint)
+3. User is redirected to Google consent screen
+4. After authorization, backend automatically redirects back to `/Auth/google/handle`
+5. Backend processes OAuth token and returns JWT tokens
+6. Frontend receives tokens in response
+7. Store `token` as access token and `refreshToken` for future requests
+
+**Features:**
+- Automatically creates new user account if Google email is not in system
+- Uses Google email as primary identifier
+- Extracts user name, email, and phone (if available) from Google profile
+- Returns refresh token valid for 7 days
+
+**Notes:**
+- This endpoint requires Google OAuth credentials configured on the backend
+- The redirect URI must be whitelisted in Google Console
+- Users are created with auto-generated usernames based on their email
+- Email verification is skipped for Google OAuth users
+
+---
+
 ## Password Reset
 
 ### 1. Forgot Password
@@ -439,6 +515,172 @@ fetch('https://api.domain.com/api/protected-endpoint', {
   }
 });
 ```
+
+---
+
+## User Profile
+
+### 1. Get Current User Profile
+
+**Endpoint:** `GET /Users/profile`
+
+**Description:** Retrieves the current logged-in user's profile information.
+
+**Headers Required:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Response (Success - 200 OK):**
+```json
+{
+  "id": "user-uuid",
+  "userName": "john_doe",
+  "email": "john@example.com",
+  "phoneNumber": "+20123456789",
+  "fullName": "John Doe",
+  "role": "user",
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Response (Error - 401):**
+```json
+{
+  "message": "Unauthorized - Invalid or expired token"
+}
+```
+
+**Response (Error - 404):**
+```json
+{
+  "message": "User not found"
+}
+```
+
+**Frontend Implementation:**
+```javascript
+async function getCurrentUserProfile(accessToken) {
+  const response = await fetch('https://api.domain.com/api/Users/profile', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const data = await response.json();
+  if (response.ok) {
+    return data;
+  } else {
+    console.error('Error:', data.message);
+  }
+  return null;
+}
+```
+
+---
+
+### 2. Update Current User Profile
+
+**Endpoint:** `PUT /Users/profile`
+
+**Description:** Updates the current logged-in user's profile information.
+
+**Headers Required:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "fullName": "John Updated",
+  "phoneNumber": "+20987654321",
+  "userName": "john_updated"
+}
+```
+
+**Response (Success - 200 OK):**
+```json
+{
+  "id": "user-uuid",
+  "userName": "john_updated",
+  "email": "john@example.com",
+  "phoneNumber": "+20987654321",
+  "fullName": "John Updated",
+  "role": "user",
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T12:45:00Z"
+}
+```
+
+**Response (Error - 400):**
+```json
+{
+  "message": "Invalid input data"
+}
+```
+
+**Response (Error - 401):**
+```json
+{
+  "message": "Unauthorized - Invalid or expired token"
+}
+```
+
+**Response (Error - 404):**
+```json
+{
+  "message": "User not found"
+}
+```
+
+**Response (Error - 409):**
+```json
+{
+  "message": "Username is already taken"
+}
+```
+
+**Frontend Implementation:**
+```javascript
+async function updateUserProfile(accessToken, updateData) {
+  const response = await fetch('https://api.domain.com/api/Users/profile', {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updateData)
+  });
+
+  const data = await response.json();
+  if (response.ok) {
+    return data;
+  } else {
+    console.error('Error:', data.message);
+  }
+  return null;
+}
+
+// Usage:
+const updatedProfile = await updateUserProfile(accessToken, {
+  fullName: "John Updated",
+  phoneNumber: "+20987654321",
+  userName: "john_updated"
+});
+```
+
+**Notes:**
+- Only authenticated users can access this endpoint
+- Email cannot be changed through this endpoint
+- Username must be unique across the system
+- Phone number must include country code
+- All fields are optional - only include fields you want to update
 
 ---
 
