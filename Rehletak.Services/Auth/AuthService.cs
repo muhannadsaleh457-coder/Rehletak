@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -18,6 +22,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Mail;
 using System.Security.Claims;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using Twilio;
@@ -32,7 +37,8 @@ namespace Rehletak.Abstractions.Auth
         IOptionsSnapshot<EmailSettings> emailSettings,
         IConnectionMultiplexer redis,
         RehletakDbContext context,
-        UserManager<AppUser> userManager
+        UserManager<AppUser> userManager,
+        RoleManager<IdentityRole> roleManager
         ) : IAuthService
     {
 
@@ -94,7 +100,7 @@ namespace Rehletak.Abstractions.Auth
                         user = new UserResponse
                         {
                             id = user.Id,
-                            userName = user.UserName,
+                            fullName = user.full_name,
                             role = userManager.GetRolesAsync(user).Result.FirstOrDefault(),
                             token = ""
                         }
@@ -189,7 +195,8 @@ namespace Rehletak.Abstractions.Auth
                 full_name = userInfoObj.fullName,
                 UserName = userInfoObj.email,
                 PhoneNumber = userInfoObj.phoneNumber,
-                Email = userInfoObj.email
+                Email = userInfoObj.email,
+                is_email_verified = true
             };
 
             newUser.PasswordHash = userInfoObj.password;
@@ -200,6 +207,13 @@ namespace Rehletak.Abstractions.Auth
             {
                 throw new Exception($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
+
+            if(!await roleManager.RoleExistsAsync("User"))
+            {
+                await roleManager.CreateAsync(new IdentityRole("User"));
+            }
+
+            await userManager.AddToRoleAsync(newUser, "User");
 
             // Delete OTP and password from Redis
             await db.KeyDeleteAsync(request.email);
@@ -244,8 +258,7 @@ namespace Rehletak.Abstractions.Auth
 
             };
 
-            context.refresh_tokens.Add(newRefreshToken);
-            await context.SaveChangesAsync();
+            await SaveRefreshTokenAsync(newRefreshToken);
 
             return new LoginResponse
             {
@@ -372,8 +385,9 @@ namespace Rehletak.Abstractions.Auth
             }
         }
 
-        private async Task<string> GenerateJwtAccessTokenAsync(AppUser user)
+        public async Task<string> GenerateJwtAccessTokenAsync(AppUser user)
         {
+
             var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtOptions.Value.Key)
         );
@@ -409,7 +423,7 @@ namespace Rehletak.Abstractions.Auth
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private string GenerateRefreshToken()
+        public string GenerateRefreshToken()
         {
             return Guid.NewGuid().ToString();
         }
@@ -436,10 +450,37 @@ namespace Rehletak.Abstractions.Auth
 
         private string HashPassword(string password)
         {
+
             return userManager.PasswordHasher.HashPassword(null, password);
         }
 
+        public async Task SaveRefreshTokenAsync(RefreshToken refreshToken)
+        {
+            context.refresh_tokens.Add(refreshToken);
+            await context.SaveChangesAsync();
+        }
 
+        public async Task InitUserAsync(AppUser user)
+        {
+            var newUser = new AppUser
+            {
+                full_name = user.full_name,
+                UserName = user.UserName,
+                PhoneNumber = user.PhoneNumber,
+                Email = user.Email
+            };
+
+            await userManager.CreateAsync(newUser);
+
+            if (!await roleManager.RoleExistsAsync("User"))
+            {
+                await roleManager.CreateAsync(new IdentityRole("User"));
+            }
+
+            await userManager.AddToRoleAsync(newUser, "User");
+        }
+
+       
     }
 
 }

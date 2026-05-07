@@ -1,6 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Rehletak.Abstractions;
+using Rehletak.Domain.Entites.Auth;
 using Rehletak.Shared.Dtos.Auth.Login;
 using Rehletak.Shared.Dtos.Auth.RegisterByEmail;
 using Rehletak.Shared.Dtos.Auth.ResetPassword;
@@ -11,11 +16,12 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text;
 
+
 namespace Rehletak.Presentation.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthController(IServiceManager serviceManager) : ControllerBase
+    public class AuthController(IServiceManager serviceManager,UserManager<AppUser> userManager) : ControllerBase
     {
         [HttpPost("send-sms-otp")]
         public async Task<IActionResult> sendOtp(SendOtpRequest request)
@@ -90,6 +96,55 @@ namespace Rehletak.Presentation.Controllers
         }
 
 
-        //mmmmmmmmmmmm
-    }
+        [HttpGet("google/login")]
+        public IActionResult GoogleLogin()
+        {
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = Url.Action("GoogleCallback", "Auth")
+            };
+            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+        }
+
+
+        [HttpGet("google/callback")]
+        public async Task<IActionResult> GoogleCallback()
+        {
+            var result = await HttpContext.AuthenticateAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme
+    );
+
+            if (!result.Succeeded)
+                return Unauthorized();
+
+            var email = result.Principal.FindFirst(ClaimTypes.Email)?.Value;
+            var name = result.Principal.FindFirst(ClaimTypes.Name)?.Value;
+            var phoneNumber = result.Principal.FindFirst(ClaimTypes.MobilePhone)?.Value;
+
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                await serviceManager.authService.InitUserAsync(user);
+            }
+            var refreshToken =  serviceManager.authService.GenerateRefreshToken();
+
+            var token = await serviceManager.authService.GenerateJwtAccessTokenAsync(user);
+
+            var newRefrshToken = new RefreshToken
+            {
+                token = refreshToken,
+                expires_at = DateTime.UtcNow.AddDays(7),
+                userId = user.Id
+            };
+
+            await serviceManager.authService.SaveRefreshTokenAsync(newRefrshToken);
+
+            return Ok(new {
+                token,
+                refreshToken
+            });
+        }
+    
+}
+
 }

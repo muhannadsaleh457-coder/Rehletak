@@ -1,5 +1,7 @@
 
 using Hangfire;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -29,10 +31,29 @@ namespace Rehletak
             builder.Services.AddSwaggerGen();
 
 
+            builder.Services.AddCors(options =>
+            {
+               
+                options.AddPolicy("AllowAngular", policy =>
+                {
+                    policy.WithOrigins("http://localhost:4200")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials(); // ← مهم عشان الـ cookies
+                });
+            });
+
+            builder.Services.AddIdentityCore<AppUser>()
+            .AddSignInManager()
+           .AddRoles<IdentityRole>()
+           .AddEntityFrameworkStores<RehletakDbContext>()
+           .AddDefaultTokenProviders();
+
             builder.Services.AddAuthentication(options =>
             {
-                options.DefaultAuthenticateScheme = "Bearer";
-                options.DefaultChallengeScheme = "Bearer";
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -47,14 +68,32 @@ namespace Rehletak
                         Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
                     )
                 };
-            });
+            }).AddCookie(options =>
+            {
+                options.Cookie.SameSite = SameSiteMode.None;  
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            })
 
+                .AddGoogle(options =>
+                {
+                    options.ClientId = builder.Configuration["Google:ClientId"];
+                    options.ClientSecret = builder.Configuration["Google:ClientSecret"];
+                    //options.CallbackPath = "/api/auth/google/callback";
+
+                    options.CorrelationCookie.SameSite = SameSiteMode.None;
+                    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    options.CorrelationCookie.HttpOnly = true;
+
+                    options.SaveTokens = true;
+
+                });
+
+            
 
             builder.Services.AddScoped<IServiceManager, ServiceManager>();
 
-            builder.Services.AddIdentity<AppUser, IdentityRole>()
-              .AddEntityFrameworkStores<RehletakDbContext>()
-              .AddDefaultTokenProviders();
+
+           
 
 
             builder.Services.AddDbContext<RehletakDbContext>(options =>
@@ -63,12 +102,12 @@ namespace Rehletak
 
             //Redis Connection
 
-           builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-           {
-               var connectionString = builder.Configuration.GetConnectionString("Redis")
-                   ?? "localhost:6379";
-               return ConnectionMultiplexer.Connect(connectionString);
-           });
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var connectionString = builder.Configuration.GetConnectionString("Redis")
+                    ?? "localhost:6379";
+                return ConnectionMultiplexer.Connect(connectionString);
+            });
 
 
 
@@ -92,6 +131,8 @@ namespace Rehletak
 
             var app = builder.Build();
 
+
+            //Hangfire
             var jobManager = app.Services.GetRequiredService<IRecurringJobManager>();
 
             jobManager.AddOrUpdate<MyBackGroundJobs>(
@@ -112,7 +153,7 @@ namespace Rehletak
             }
 
             app.UseHttpsRedirection();
-
+            app.UseCors("AllowAngular");
             app.UseAuthentication();
             app.UseAuthorization();
 

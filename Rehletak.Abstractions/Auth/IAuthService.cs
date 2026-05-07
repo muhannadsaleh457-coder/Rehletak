@@ -1,4 +1,6 @@
-﻿using Rehletak.Shared.Dtos.Auth.Login;
+﻿using Rehletak.Domain.Entites.Auth;
+using Rehletak.Shared.Dtos.Auth;
+using Rehletak.Shared.Dtos.Auth.Login;
 using Rehletak.Shared.Dtos.Auth.RegisterByEmail;
 using Rehletak.Shared.Dtos.Auth.ResetPassword;
 using Rehletak.Shared.Dtos.Auth.SendOtp;
@@ -20,5 +22,9 @@ namespace Rehletak.Abstractions.Auth
         Task<VerifyResetOtpResponse> VerifyResetOtpAsync(VerifyResetOtpRequest request);
         Task<ResetPasswordResponse> ResetPasswordAsync(ResetPasswordRequest request);
         Task<LoginResponse> RefreshAsync (string oldRefreshtoken);
+        Task<string> GenerateJwtAccessTokenAsync(AppUser user);
+        string GenerateRefreshToken();
+        Task SaveRefreshTokenAsync(RefreshToken refreshToken);
+        Task InitUserAsync(AppUser user);
     }
 }
