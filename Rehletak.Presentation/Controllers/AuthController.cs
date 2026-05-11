@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Rehletak.Abstractions;
 using Rehletak.Domain.Entites.Auth;
+using Rehletak.Shared.Dtos.Auth.Google;
 using Rehletak.Shared.Dtos.Auth.Login;
 using Rehletak.Shared.Dtos.Auth.RegisterByEmail;
 using Rehletak.Shared.Dtos.Auth.ResetPassword;
@@ -95,8 +96,9 @@ namespace Rehletak.Presentation.Controllers
 
         }
 
+        //OAuth with Google For Websites
 
-        [HttpGet("google/login")]
+        [HttpGet("google-login")]
         public IActionResult GoogleLogin()
         {
             var properties = new AuthenticationProperties
@@ -147,7 +149,24 @@ namespace Rehletak.Presentation.Controllers
                 refreshToken
             });
         }
-    
-}
+
+
+        //OAuth with Google For Mobile Apps
+
+        [HttpPost("google/mobile")]
+        public async Task<IActionResult> GoogleMobileLogin([FromBody] GoogleMobileLoginDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await serviceManager.authService.LoginWithGoogleTokenAsync(dto.IdToken);
+
+            if (result is null)
+                return Unauthorized(new { message = "Invalid or expired Google token" });
+
+            return Ok(result);
+        }
+
+    }
 
 }

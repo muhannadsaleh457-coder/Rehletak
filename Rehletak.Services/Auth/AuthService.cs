@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -35,6 +36,7 @@ namespace Rehletak.Abstractions.Auth
         IOptionsSnapshot<TwilioOption> twilioOptions,
         IOptionsSnapshot<JwtOptions> jwtOptions,
         IOptionsSnapshot<EmailSettings> emailSettings,
+        IOptionsSnapshot<GoogleConfig> googleConfig,
         IConnectionMultiplexer redis,
         RehletakDbContext context,
         UserManager<AppUser> userManager,
@@ -487,7 +489,63 @@ namespace Rehletak.Abstractions.Auth
             await userManager.AddToRoleAsync(newUser, "User");
         }
 
-       
+        public async Task<AuthResponseDto?> LoginWithGoogleTokenAsync(string idToken)
+        {
+ 
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { googleConfig.Value.ClientId }
+                };
+
+                payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+            }
+            catch (InvalidJwtException)
+            {
+                return null; 
+            }
+
+            var user = await userManager.FindByEmailAsync(payload.Email);
+
+            if (user is null)
+            {
+                user = new AppUser
+                {
+                    Email = payload.Email,
+                    UserName = payload.Email,
+                    full_name = payload.Name,
+                    EmailConfirmed = true,
+                };
+
+                var createResult = await userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                    return null;
+            }
+
+
+            var jwt = await GenerateJwtAccessTokenAsync(user);
+            var refreshToken = GenerateRefreshToken();
+
+
+            context.refresh_tokens.Add(new RefreshToken
+            {
+                token = refreshToken,
+                expires_at = DateTime.UtcNow.AddDays(7),
+                userId = user.Id,
+            });
+            await context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                Token = jwt,
+                RefreshToken = refreshToken,
+                email = user.Email!,
+                name = user.full_name,
+            };
+        
+    }
     }
 
 }

@@ -26,5 +26,6 @@ namespace Rehletak.Abstractions.Auth
         string GenerateRefreshToken();
         Task SaveRefreshTokenAsync(RefreshToken refreshToken);
         Task InitUserWithGoogleAsync(string fullName, string userName, string phoneNumber, string email, string googleId);
+        Task<AuthResponseDto?> LoginWithGoogleTokenAsync(string idToken);
     }
 }

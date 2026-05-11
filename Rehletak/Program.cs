@@ -39,7 +39,7 @@ namespace Rehletak
                     policy.WithOrigins("http://localhost:4200")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
-                          .AllowCredentials(); // ← مهم عشان الـ cookies
+                          .AllowCredentials(); 
                 });
             });
 
@@ -126,6 +126,7 @@ namespace Rehletak
             builder.Services.Configure<TwilioOption>(builder.Configuration.GetSection("TwilioSettings"));
             builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
             builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+            builder.Services.Configure<GoogleConfig>(builder.Configuration.GetSection("Google"));
 
 
             var app = builder.Build();

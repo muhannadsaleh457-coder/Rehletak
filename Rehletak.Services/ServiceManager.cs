@@ -21,10 +21,11 @@ namespace Rehletak.Services
         RoleManager<IdentityRole> roleManager,
         IOptionsSnapshot<JwtOptions> jwtOptions,
         IOptionsSnapshot<TwilioOption> twilioOptions,
-        IOptionsSnapshot<EmailSettings> emailSettings
+        IOptionsSnapshot<EmailSettings> emailSettings,
+        IOptionsSnapshot<GoogleConfig> googleConfig
         ) : IServiceManager
     {
-        public IAuthService authService { get; } = new AuthService(twilioOptions,jwtOptions,emailSettings,connectionMultiplexer,context,userManager, roleManager);
+        public IAuthService authService { get; } = new AuthService(twilioOptions,jwtOptions,emailSettings, googleConfig, connectionMultiplexer,context,userManager, roleManager);
 
         public IUsersServices usersServices { get;  } = new UsersServices(userManager, roleManager);
     }
